@@ -1,0 +1,41 @@
+name: Monitor Diario Oficial MPMG
+
+on:
+  schedule:
+    # Horários em UTC: 09:00, 12:00 e 16:00 de Brasília.
+    - cron: "0 12 * * *"
+    - cron: "0 15 * * *"
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+    inputs:
+      data:
+        description: "Data a verificar (AAAA-MM-DD); vazio = hoje"
+        required: false
+      teste:
+        description: "Só enviar um push de teste para o celular"
+        type: boolean
+        default: false
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TZ: America/Sao_Paulo
+      NTFY_TOPICO: ${{ secrets.NTFY_TOPICO }}
+      NOMES: ${{ secrets.NOMES }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Verificar edição
+        run: |
+          if [ "${{ inputs.teste }}" = "true" ]; then
+            python monitor_diario.py --teste-push
+          elif [ -n "${{ inputs.data }}" ]; then
+            python monitor_diario.py --data "${{ inputs.data }}"
+          else
+            python monitor_diario.py
+          fi
